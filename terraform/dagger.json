@@ -1,0 +1,14 @@
+{
+  "name": "terraform",
+  "engineVersion": "v0.19.6",
+  "sdk": {
+    "source": "go"
+  },
+  "dependencies": [
+    {
+      "name": "apko",
+      "source": "../apko"
+    }
+  ],
+  "disableDefaultFunctionCaching": true
+}

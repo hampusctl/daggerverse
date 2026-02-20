@@ -1,0 +1,27 @@
+# SBOM Report
+
+- **Syft Version:** {{ .descriptor.version }}
+
+---
+## Package Count by Type
+
+{{- $types := dict }}
+{{- range .artifacts }}
+  {{- $_ := set $types .type (add (index $types .type | default 0) 1) }}
+{{- end }}
+{{- range $k, $v := $types }}
+- **{{ $k }}**: {{ $v }}
+{{- end }}
+
+---
+
+## Packages ({{ if .artifacts }}{{ len .artifacts }}{{ else }}0{{ end }})
+
+| Name | Version | Type | License | PURL |
+|------|---------|------|---------|------|
+{{- range .artifacts }}
+| {{ .name }} | {{ .version }} | {{ .type }} |
+{{- if .licenses }}
+  {{- range $i, $l := .licenses }}{{- if $i }}, {{ end -}}{{ $l.value }}{{- end }}
+{{- else }}Unknown{{- end }} | {{ .purl }} |
+{{- end }}

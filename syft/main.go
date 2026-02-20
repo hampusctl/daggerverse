@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"dagger/syft/internal/dagger"
 	"fmt"
 )
@@ -11,129 +10,112 @@ type Syft struct {
 	Container *dagger.Container
 }
 
-// New creates a new Syft instance with a configured container environment.
-// If no container is provided, it creates one from the specified repository and tag.
+// New creates a new Terraform instance with base container
 func New(
 	// +optional
-	// container to use for Syft operations. If not provided, creates a new one from repository:tag
+	// container is an existing container to use instead of creating a new one
 	container *dagger.Container,
-	// +default="anchore/syft"
-	// repository is the container registry and image name for the Syft tool
+	// +optional
+	// apkoFile is a custom Apko image file to import instead of using repository:tag
+	apkoFile *dagger.File,
+	// +default="ghcr.io/anchore/syft"
+	// repository is the Docker repository for the Terraform image (default: hashicorp/terraform)
 	repository string,
 	// +default="latest"
-	// tag specifies the version of the Syft tool to use
+	// tag is the Docker tag for the Terraform image (default: latest)
 	tag string,
 	// +optional
-	// extraCaCerts are additional CA certificate files to trust in the container environment
+	// extraCaCerts are additional CA certificate files to add to the container
 	extraCaCerts []*dagger.File,
 ) *Syft {
-	if container == nil {
-		// Create base container from the specified Syft image
-		container = dag.Container().From(fmt.Sprintf("%s:%s", repository, tag))
 
-		// Install additional CA certificates for secure connections
+	if container == nil {
+		if apkoFile == nil {
+			if repository != "" && tag != "" {
+				container = dag.Container().From(fmt.Sprintf("%s:%s", repository, tag))
+			}
+		} else {
+			container = dag.Apko().Build(apkoFile)
+		}
+
+		// Add extra CA certificates if provided.
 		for i, cert := range extraCaCerts {
 			certPath := fmt.Sprintf("/usr/local/share/ca-certificates/extra%d.crt", i)
 			container = container.WithFile(certPath, cert)
 		}
 	}
+	container = container.WithWorkdir("/workspace")
 
-	return &Syft{Container: container}
+	return &Syft{
+		Container: container,
+	}
 }
 
 // ScanImage generates an SBOM from a container image and returns it as a file.
 // Supports various image sources like docker:, registry:, oci-archive:, etc.
-func (s *Syft) ScanImage(
-	ctx context.Context,
-	// imageRef is the container image reference to scan (e.g., "alpine:latest", "docker:myimage:tag")
-	imageRef string,
-	// +default="syft-json"
-	// outputFormat is the SBOM output format (syft-json, spdx-json, cyclonedx-json, etc.)
-	outputFormat string,
+func (s *Syft) Scan(
 	// +optional
-	// extraArgs are additional command-line arguments passed to 'syft scan'
-	extraArgs []string,
-) (*dagger.File, error) {
-	args := []string{"syft", "scan", imageRef, "-o", outputFormat, "--file", "/sbom.json"}
-	if extraArgs != nil {
-		args = append(args, extraArgs...)
-	}
-
-	ctr := s.Container.WithExec(args)
-	return ctr.File("/sbom.json"), nil
-}
-
-// ScanDirectory generates an SBOM from a filesystem directory and returns it as a file.
-// The directory is mounted into the container and scanned via: syft scan dir:/workspace
-func (s *Syft) ScanDirectory(
-	ctx context.Context,
-	// directory is the filesystem directory to scan for packages
+	// image is a container image to scan (e.g., "alpine:latest" or "docker:myimage:tag")
+	image *dagger.Container,
+	// +optional
+	// directory is a directory to scan for SBOM (can be "." for current directory)
 	directory *dagger.Directory,
-	// +default="syft-json"
-	// outputFormat is the SBOM output format (syft-json, spdx-json, cyclonedx-json, etc.)
-	outputFormat string,
 	// +optional
-	// extraArgs are additional command-line arguments passed to 'syft scan'
-	extraArgs []string,
-) (*dagger.File, error) {
-	args := []string{"syft", "scan", "dir:/workspace", "-o", outputFormat, "--file", "/sbom.json"}
-	if extraArgs != nil {
-		args = append(args, extraArgs...)
-	}
-
-	ctr := s.Container.
-		WithMountedDirectory("/workspace", directory).
-		WithExec(args)
-
-	return ctr.File("/sbom.json"), nil
-}
-
-// ScanFile generates an SBOM from a single file (archive, binary, etc.) and returns it as a file.
-// Useful for scanning tarballs, zip files, or individual binaries.
-func (s *Syft) ScanFile(
-	ctx context.Context,
-	// file is the file to scan (tarball, binary, etc.)
+	// file is a single file to scan for SBOM
 	file *dagger.File,
-	// +default="syft-json"
-	// outputFormat is the SBOM output format (syft-json, spdx-json, cyclonedx-json, etc.)
-	outputFormat string,
-	// +optional
-	// extraArgs are additional command-line arguments passed to 'syft scan'
-	extraArgs []string,
-) (*dagger.File, error) {
-	args := []string{"syft", "scan", "file:/input", "-o", outputFormat, "--file", "/sbom.json"}
-	if extraArgs != nil {
-		args = append(args, extraArgs...)
-	}
-
-	ctr := s.Container.
-		WithFile("/input", file).
-		WithExec(args)
-
-	return ctr.File("/sbom.json"), nil
-}
-
-// Convert converts an SBOM from one format to another.
-// Useful for converting between SPDX, CycloneDX, and Syft JSON formats.
-func (s *Syft) Convert(
-	ctx context.Context,
-	// sbom is the SBOM file to convert
-	sbom *dagger.File,
 	// +default="spdx-json"
-	// outputFormat is the target SBOM format (spdx-json, cyclonedx-json, syft-json, etc.)
+	// outputFormat specifies the SBOM output format.
+	// Supported formats: cyclonedx-json, cyclonedx-xml, github-json, purls, spdx-json, spdx-tag-value, syft-json, syft-table, syft-text, template
 	outputFormat string,
+	// +defaultPath="/.templates/syft.tmpl"
+	// template is the Go template file to use when outputFormat=template
+	template *dagger.File,
 	// +optional
-	// extraArgs are additional command-line arguments passed to 'syft convert'
+	// scheme prefixes the source path (e.g., "docker:SOURCE")
+	scheme string,
+	// +optional
+	// extraArgs are additional command-line arguments passed directly to `syft scan`
 	extraArgs []string,
-) (*dagger.File, error) {
-	args := []string{"syft", "convert", "/input.json", "-o", outputFormat, "--file", "/output.json"}
+) (*dagger.Directory, error) {
+	if image == nil && directory == nil && file == nil {
+		return nil, fmt.Errorf("You must provide either --image, --directory or --file")
+	}
+
+	ctr := s.Container
+
+	if image != nil {
+		tarball := image.AsTarball()
+		ctr = ctr.
+			WithFile("SOURCE", tarball)
+	} else if directory != nil {
+		ctr = ctr.
+			WithDirectory("SOURCE", directory)
+	} else if file != nil {
+		ctr = ctr.
+			WithFile("SOURCE", file)
+	} else {
+		return nil, fmt.Errorf("You can only provide either a image, directory or file")
+	}
+
+	if scheme != "" {
+		scheme = fmt.Sprintf("%s:", scheme)
+	}
+
+	args := []string{
+		"scan",
+		fmt.Sprintf("%sSOURCE", scheme),
+		"-o", fmt.Sprintf("%s=/tmp/sbom.json", outputFormat),
+		"-o", "template=/tmp/sbom.md",
+		"-t", "syft.tpml",
+	}
+
 	if extraArgs != nil {
 		args = append(args, extraArgs...)
 	}
 
-	ctr := s.Container.
-		WithFile("/input.json", sbom).
-		WithExec(args)
-
-	return ctr.File("/output.json"), nil
+	ctr = ctr.
+		WithFile("syft.tpml", template).
+		WithExec(args, dagger.ContainerWithExecOpts{UseEntrypoint: true})
+	return ctr.
+		Directory("/tmp"), nil
 }

@@ -1,7 +1,14 @@
 {
   "name": "syft",
-  "engineVersion": "v0.19.6",
+  "engineVersion": "v0.19.11",
   "sdk": {
     "source": "go"
-  }
+  },
+  "dependencies": [
+    {
+      "name": "apko",
+      "source": "git@github.com:hampusctl/daggerverse.git/apko@main",
+      "pin": "be5d89ac1f872c95cda4ff7e01b14a1c55aa6ebb"
+    }
+  ]
 }

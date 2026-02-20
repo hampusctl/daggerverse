@@ -10,7 +10,7 @@ type Syft struct {
 	Container *dagger.Container
 }
 
-// New creates a new Terraform instance with base container
+// New creates a new Syft instance with base container.
 func New(
 	// +optional
 	// container is an existing container to use instead of creating a new one
@@ -19,10 +19,10 @@ func New(
 	// apkoFile is a custom Apko image file to import instead of using repository:tag
 	apkoFile *dagger.File,
 	// +default="ghcr.io/anchore/syft"
-	// repository is the Docker repository for the Terraform image (default: hashicorp/terraform)
+	// repository is the Docker repository for the Syft image (default: ghcr.io/anchore/syft)
 	repository string,
 	// +default="latest"
-	// tag is the Docker tag for the Terraform image (default: latest)
+	// tag is the Docker tag for the Syft image (default: latest)
 	tag string,
 	// +optional
 	// extraCaCerts are additional CA certificate files to add to the container
@@ -105,7 +105,7 @@ func (s *Syft) Scan(
 		"scan",
 		fmt.Sprintf("%sSOURCE", scheme),
 		"-o", fmt.Sprintf("%s=/tmp/sbom.json", outputFormat),
-		"-o", "template=/tmp/sbom.md",
+		"-o", "template=/tmp/report.md",
 		"-t", "syft.tpml",
 	}
 

@@ -2,7 +2,6 @@
 
 - **Syft Version:** {{ .descriptor.version }}
 
----
 ## Package Count by Type
 
 {{- $types := dict }}
@@ -17,6 +16,9 @@
 
 ## Packages ({{ if .artifacts }}{{ len .artifacts }}{{ else }}0{{ end }})
 
+<details>
+<summary>Show package table</summary>
+
 | Name | Version | Type | License | PURL |
 |------|---------|------|---------|------|
 {{- range .artifacts }}
@@ -25,3 +27,5 @@
   {{- range $i, $l := .licenses }}{{- if $i }}, {{ end -}}{{ $l.value }}{{- end }}
 {{- else }}Unknown{{- end }} | {{ .purl }} |
 {{- end }}
+
+</details>

@@ -1,7 +1,14 @@
 {
   "name": "grant",
-  "engineVersion": "v0.19.6",
+  "engineVersion": "v0.19.11",
   "sdk": {
     "source": "go"
-  }
+  },
+  "dependencies": [
+    {
+      "name": "apko",
+      "source": "https://github.com/hampusctl/daggerverse.git/apko@main",
+      "pin": "6c23f05a146beb9759d5b04a72bb032dcc285a9d"
+    }
+  ]
 }

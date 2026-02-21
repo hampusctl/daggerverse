@@ -60,7 +60,7 @@ func (g *Grype) Scan(
 	ctx context.Context,
 	// sbom is the SBOM file to scan (Syft JSON, CycloneDX, SPDX, etc.)
 	sbom *dagger.File,
-	// +defaultPath="/.grype.yaml"
+	// +required
 	// config is the Grype configuration file to use
 	config *dagger.File,
 	// +defaultPath="/.templates/grype.tmpl"

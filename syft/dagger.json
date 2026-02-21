@@ -7,8 +7,8 @@
   "dependencies": [
     {
       "name": "apko",
-      "source": "git@github.com:hampusctl/daggerverse.git/apko@main",
-      "pin": "be5d89ac1f872c95cda4ff7e01b14a1c55aa6ebb"
+      "source": "https://github.com/hampusctl/daggerverse.git/apko@main",
+      "pin": "1cf54efa2b1c06819bb1fe1def0a9d3b03245e7f"
     }
   ]
 }

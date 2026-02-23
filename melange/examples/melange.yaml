@@ -1,0 +1,31 @@
+# Example melange.yaml — builds an APK from a small Go project.
+# Use with: dagger call new --source . with-generated-sign-key build --config=examples/melange.yaml export --path=./packages
+#
+# Requires a signing key: chain .WithGeneratedSignKey() or .WithProvidedSignKey() before Build().
+
+package:
+  name: hello
+  version: 0.0.1
+  description: "A small Go program that prints hello (built with melange)"
+  copyright:
+    - license: Apache-2.0
+  target-architecture:
+    - aarch64
+environment:
+  contents:
+    repositories:
+      - https://packages.wolfi.dev/os
+    keyring:
+      - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    packages:
+      - go
+      - ca-certificates-bundle
+pipeline:
+  - uses: git-checkout
+    with:
+      repository: https://github.com/puerco/hello.git
+      tag: v${{package.version}}
+  - uses: go/build
+    with:
+      packages: .
+      output: hello

@@ -1,0 +1,15 @@
+contents:
+  keyring:
+    - https://packages.wolfi.dev/os/wolfi-signing.rsa.pub
+    - /workspace/packages/melange.rsa.pub
+  repositories:
+    - https://packages.wolfi.dev/os
+    - "@local /workspace/packages"
+  packages:
+    - wolfi-base=1-r7
+    - hello@local
+
+cmd: /bin/sh -l
+
+archs:
+- aarch64

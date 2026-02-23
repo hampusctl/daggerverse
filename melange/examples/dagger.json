@@ -1,0 +1,20 @@
+{
+  "name": "go",
+  "engineVersion": "v0.19.11",
+  "sdk": {
+    "source": "go"
+  },
+  "dependencies": [
+    {
+      "name": "apko",
+      "source": "https://github.com/hampusctl/daggerverse.git/apko@main",
+      "pin": "56734ebf939ddafe806dc1ff7cade8e1d1640fc6"
+    },
+    {
+      "name": "melange",
+      "source": "https://github.com/hampusctl/daggerverse.git/melange@main",
+      "pin": "91eb239e11ba32ca0db20b73979c74e014d993dc"
+    }
+  ],
+  "source": "go"
+}

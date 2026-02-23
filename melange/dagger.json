@@ -1,7 +1,14 @@
 {
   "name": "melange",
-  "engineVersion": "v0.19.6",
+  "engineVersion": "v0.19.11",
   "sdk": {
     "source": "go"
-  }
+  },
+  "dependencies": [
+    {
+      "name": "apko",
+      "source": "https://github.com/hampusctl/daggerverse.git/apko@main",
+      "pin": "fea9750dbaa4f577242b7add6260e6e7840e6175"
+    }
+  ]
 }

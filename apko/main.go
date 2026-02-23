@@ -48,6 +48,16 @@ func New(
 	}
 }
 
+// WithPackages mounts a directory of packages to the container before building.
+func (a *Apko) WithPackages(
+	// +required
+	// packages is the directory of packages to mount
+	packages *dagger.Directory,
+) *Apko {
+	a.Container = a.Container.WithMountedDirectory("/workspace/packages", packages)
+	return a
+}
+
 // Build creates a container image from an Apko configuration file.
 // The configuration is processed and built into a container image.
 // Returns the built container ready for use or publishing.

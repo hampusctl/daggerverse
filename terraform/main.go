@@ -78,6 +78,37 @@ func (t *Terraform) WithCloudsYaml(
 	return t
 }
 
+// WithAwsCredentials adds AWS credentials for Terraform (for example S3 backend auth).
+func (t *Terraform) WithAwsCredentials(
+	// +required
+	// accessKeyID is the AWS access key ID
+	accessKeyID *dagger.Secret,
+	// +required
+	// secretAccessKey is the AWS secret access key
+	secretAccessKey *dagger.Secret,
+	// +optional
+	// sessionToken is the AWS session token (for temporary credentials)
+	sessionToken *dagger.Secret,
+	// +optional
+	// region sets both AWS_REGION and AWS_DEFAULT_REGION if provided
+	region string,
+) *Terraform {
+	t.Container = t.Container.
+		WithSecretVariable("AWS_ACCESS_KEY_ID", accessKeyID).
+		WithSecretVariable("AWS_SECRET_ACCESS_KEY", secretAccessKey)
+
+	if sessionToken != nil {
+		t.Container = t.Container.WithSecretVariable("AWS_SESSION_TOKEN", sessionToken)
+	}
+	if region != "" {
+		t.Container = t.Container.
+			WithEnvVariable("AWS_REGION", region).
+			WithEnvVariable("AWS_DEFAULT_REGION", region)
+	}
+
+	return t
+}
+
 // Init initializes a Terraform working directory
 func (t *Terraform) Init(
 	ctx context.Context,

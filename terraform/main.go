@@ -109,6 +109,32 @@ func (t *Terraform) WithAwsCredentials(
 	return t
 }
 
+// WithOpenstackApplicationCredentials sets the minimum OpenStack app-credential variables for Terraform/OpenStack SDKs.
+func (t *Terraform) WithOpenstackApplicationCredentials(
+	// +required
+	// authURL sets OS_AUTH_URL
+	authURL string,
+	// +required
+	// applicationCredentialID sets OS_APPLICATION_CREDENTIAL_ID
+	applicationCredentialID string,
+	// +required
+	// applicationCredentialSecret sets OS_APPLICATION_CREDENTIAL_SECRET
+	applicationCredentialSecret *dagger.Secret,
+	// +required
+	// region sets OS_REGION_NAME
+	region string,
+) *Terraform {
+	t.Container = t.Container.
+		WithEnvVariable("OS_AUTH_URL", authURL).
+		WithEnvVariable("OS_APPLICATION_CREDENTIAL_ID", applicationCredentialID).
+		WithSecretVariable("OS_APPLICATION_CREDENTIAL_SECRET", applicationCredentialSecret)
+	if region != "" {
+		t.Container = t.Container.WithEnvVariable("OS_REGION_NAME", region)
+	}
+
+	return t
+}
+
 // Init initializes a Terraform working directory
 func (t *Terraform) Init(
 	ctx context.Context,

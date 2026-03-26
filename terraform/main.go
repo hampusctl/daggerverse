@@ -199,7 +199,7 @@ func (t *Terraform) Apply(
 		return nil, err
 	}
 
-	args := []string{"terraform", "apply", "plan.tfplan", "--auto-approve"}
+	args := []string{"terraform", "apply", "--auto-approve", "plan.tfplan"}
 	if extraArgs != nil {
 		args = append(args, extraArgs...)
 	}

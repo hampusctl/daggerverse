@@ -53,9 +53,9 @@ func New(
 		container = dag.Container().From(base).
 			WithMountedFile("/tmp/kustomize.tar.gz", archive).
 			WithExec([]string{"tar", "-xzf", "/tmp/kustomize.tar.gz", "-C", "/usr/local/bin", "kustomize"})
+		// kustomize (Go) reads every PEM file in /etc/ssl/certs.
 		for i, cert := range extraCaCerts {
-			container = container.WithFile(fmt.Sprintf("/usr/local/share/ca-certificates/extra%d.crt", i), cert).
-				WithExec([]string{"update-ca-certificates"})
+			container = container.WithFile(fmt.Sprintf("/etc/ssl/certs/extra%d.pem", i), cert)
 		}
 	}
 	return &Kustomize{Container: container}, nil

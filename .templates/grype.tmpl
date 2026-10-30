@@ -10,7 +10,7 @@
 |------|---------|---------|---------------|----------|-----|
 {{- if .Matches }}
 {{- range .Matches }}
-| {{- $sev := .Vulnerability.Severity -}}{{ if eq $sev "Critical" }} 🔴 {{ else if eq $sev "High" }} 🟠 {{ else if eq $sev "Medium" }} 🟡 {{ else if eq $sev "Low" }} 🟢 {{ else if eq $sev "Negligible" }} ⚪ {{ else }} ⚫ {{ end }} | {{ .Artifact.Name }} | {{ .Artifact.Version }} | [{{ .Vulnerability.ID }}]({{ .Vulnerability.DataSource }}) | {{ .Vulnerability.Severity }} | {{ if .Vulnerability.Fix.Versions }}{{ join .Vulnerability.Fix.Versions ", " }}{{ else }}-{{ end }} |
+| {{- $sev := .Vulnerability.Severity -}}{{ if eq $sev "Critical" }} 🔴 {{ else if eq $sev "High" }} 🟠 {{ else if eq $sev "Medium" }} 🟡 {{ else if eq $sev "Low" }} 🟢 {{ else if eq $sev "Negligible" }} ⚪ {{ else }} ⚫ {{ end }} | {{ .Artifact.Name }} | {{ .Artifact.Version }} | [{{ .Vulnerability.ID }}]({{ .Vulnerability.DataSource }}) | {{ .Vulnerability.Severity }} | {{ if .Vulnerability.Fix.Versions }}{{ join ", " .Vulnerability.Fix.Versions }}{{ else }}-{{ end }} |
 {{- end }}
 {{- else }}
 | - | - | - | No vulnerabilities found | - | - |

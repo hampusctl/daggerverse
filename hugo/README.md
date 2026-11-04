@@ -35,16 +35,13 @@ report, err := h.Linkcheck(ctx, site, dagger.HugoLinkcheckOpts{BasePath: "/docs/
 ### Node dependencies (`--npm`)
 
 Themes such as [Docsy](https://www.docsy.dev) take Bootstrap, Font Awesome or a search
-library from the site's `node_modules`, and may want a newer Dart Sass than the image's. With
-`--npm`, `build` (and `site`) first run `npm ci --ignore-scripts --no-audit --no-fund` in the
-project directory (`--path`; it needs a `package-lock.json`), then put its
-`node_modules/.bin` first on `PATH`. A pinned
-[`sass-embedded`](https://www.npmjs.com/package/sass-embedded) in the lockfile is then the
-`sass` Hugo's Dart Sass transpiler runs; without it Hugo uses the image's Dart Sass.
+library from the site's `node_modules`. With `--npm`, `build` (and `site`) first run
+`npm ci --ignore-scripts --no-audit --no-fund` in the project directory (`--path`; it needs a
+`package-lock.json`), then put its `node_modules/.bin` on `PATH`, after the pinned Dart Sass:
+a `sass-embedded` in the lockfile is not the `sass` Hugo runs (its native compiler is chosen
+by its own libc detection, which npm's install does not always match on Alpine).
 
-- Node.js and npm are the Hugo image's (Alpine packages), pinned by its digest. The install
-  runs in the same musl container as Hugo, so npm picks the `-musl-` native packages
-  (e.g. `sass-embedded-linux-musl-x64`).
+- Node.js and npm are the Hugo image's (Alpine packages), pinned by its digest.
 - Packages are checked against the lockfile's `integrity` hashes; lifecycle scripts do not
   run. npm's download cache is kept in the `hugo-cache` volume.
 - Hugo resolves a theme module's `node_modules/...` mounts from the project's `node_modules`.
@@ -55,9 +52,12 @@ site := h.Build(src, dagger.HugoBuildOpts{Path: "docs/site", Npm: true})
 
 Pinned versions (override with `--container` / `--lychee`):
 
-- Hugo extended `v0.168.0`: `ghcr.io/gohugoio/hugo`, by digest, with its Go, git, Dart Sass,
-  Node.js and npm. It runs as user `hugo`; a replacement container needs a `hugo` user and
+- Hugo extended `v0.168.0`: `ghcr.io/gohugoio/hugo`, by digest, with its Go, git, Node.js
+  and npm. It runs as user `hugo`; a replacement container needs a `hugo` user and
   writable `/tmp` (and `npm` on `PATH` for `--npm`).
+- Dart Sass `1.105.0`: the linux-musl release archive for the engine's platform (amd64,
+  arm64), checked against its SHA-256, first on `PATH` for every build (the image's own Dart
+  Sass is older). Hugo's `dartsass` transpiler runs it.
 - lychee `0.24.2`: `lycheeverse/lychee:0.24.2-alpine`, by digest.
 - Pagefind `v1.5.2`: the linux-musl release archive for the engine's platform (amd64,
   arm64), checked against its SHA-256.

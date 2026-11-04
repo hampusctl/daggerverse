@@ -3,7 +3,8 @@
 // Build runs Hugo (extended edition, official image pinned by digest) on a site's source
 // directory and returns the built site (Hugo's public/ directory); with npm it first installs
 // the site's Node dependencies from its package-lock.json (themes such as Docsy take
-// Bootstrap, Font Awesome and Dart Sass from node_modules). Index adds a Pagefind
+// Bootstrap and Font Awesome from node_modules). Sass is compiled with a pinned Dart Sass
+// release. Index adds a Pagefind
 // search index, Linkcheck checks the built site's links with lychee, and Archive packs the
 // site as a tarball. The built directory is what GitHub Pages and GitLab Pages publish.
 package main
@@ -26,10 +27,21 @@ const (
 	// linux-musl archives by architecture (the release's .sha256 files).
 	pagefindVersion = "v1.5.2"
 
+	// dartSassVersion is the Dart Sass release Build puts first on PATH (Hugo's dartsass
+	// transpiler runs `sass`); dartSassSHA256 pins its linux-musl archives (the image is
+	// Alpine) by architecture.
+	dartSassVersion = "1.105.0"
+	dartSassDir     = "/tmp/dart-sass"
+
 	src = "/src"
 	// siteRoot is where Linkcheck mounts the site (lychee's --root-dir).
 	siteRoot = "/site"
 )
+
+var dartSassSHA256 = map[string]string{
+	"x64":   "b71b36d88354825b57eaffed397538aa84d2e8840e8d2fe13dd57cd8aa3a3914",
+	"arm64": "98fbeaea1674851cba3b6f854fa3ff00a73bf8bd6056c0e8a768c47d4f578b43",
+}
 
 var pagefindSHA256 = map[string]string{
 	"x86_64":  "afb824a9e7f64905a934900481cea5be679c03975e527329e0e5e6cc70f5feda",
@@ -70,6 +82,7 @@ func New(
 //
 // +cache="session"
 func (h *Hugo) Build(
+	ctx context.Context,
 	// source is the site's project directory (hugo.yaml or config/, content/, ...), or a
 	// directory that contains it (see path)
 	source *dagger.Directory,
@@ -92,11 +105,15 @@ func (h *Hugo) Build(
 	extraArgs []string,
 	// +default=false
 	// npm runs npm ci in the project directory first (it needs a package-lock.json) and puts
-	// its node_modules/.bin first on PATH, so a pinned sass-embedded is the Dart Sass Hugo uses
+	// its node_modules/.bin on PATH (after the pinned Dart Sass)
 	npm bool,
-) *dagger.Directory {
+) (*dagger.Directory, error) {
 	project := pathpkg.Join(src, pathpkg.Clean("/"+path))
-	ctr := h.Container.
+	ctr, err := h.withDartSass(ctx, h.Container)
+	if err != nil {
+		return nil, err
+	}
+	ctr = ctr.
 		WithDirectory(src, source, dagger.ContainerWithDirectoryOpts{Owner: "hugo"}).
 		WithWorkdir(project)
 	if npm {
@@ -106,7 +123,9 @@ func (h *Hugo) Build(
 			// Lifecycle scripts off: the lockfile's packages are installed as published
 			// (their integrity hashes are checked), nothing runs.
 			WithExec([]string{"npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"}).
-			WithEnvVariable("PATH", pathpkg.Join(project, "node_modules/.bin")+":${PATH}",
+			// After Dart Sass: an npm sass-embedded picks its native compiler by its own
+			// libc detection, which npm's install does not always match on Alpine.
+			WithEnvVariable("PATH", dartSassDir+":"+pathpkg.Join(project, "node_modules/.bin")+":${PATH}",
 				dagger.ContainerWithEnvVariableOpts{Expand: true})
 	}
 	args := []string{"hugo", "--source", project, "--destination", "/tmp/public",
@@ -118,7 +137,31 @@ func (h *Hugo) Build(
 		args = append(args, "--minify")
 	}
 	args = append(args, extraArgs...)
-	return ctr.WithExec(args).Directory("/tmp/public")
+	return ctr.WithExec(args).Directory("/tmp/public"), nil
+}
+
+// withDartSass installs the pinned Dart Sass release in ctr and puts it first on PATH.
+func (h *Hugo) withDartSass(ctx context.Context, ctr *dagger.Container) (*dagger.Container, error) {
+	platform, err := dag.DefaultPlatform(ctx)
+	if err != nil {
+		return nil, err
+	}
+	arch, err := releaseArch(string(platform), "x64", "arm64")
+	if err != nil {
+		return nil, err
+	}
+	name := fmt.Sprintf("dart-sass-%s-linux-%s-musl.tar.gz", dartSassVersion, arch)
+	archive := dag.HTTP(fmt.Sprintf("https://github.com/sass/dart-sass/releases/download/%s/%s", dartSassVersion, name))
+	install := fmt.Sprintf(`set -e
+cd /tmp
+echo "%s  %s" | sha256sum -c -
+tar -xzf %s -C /tmp
+%s/sass --version`, dartSassSHA256[arch], name, name, dartSassDir)
+	return ctr.
+		// The download is mode 0600; the image's user is hugo.
+		WithMountedFile("/tmp/"+name, archive, dagger.ContainerWithMountedFileOpts{Owner: "hugo"}).
+		WithExec([]string{"sh", "-c", install}).
+		WithEnvVariable("PATH", dartSassDir+":${PATH}", dagger.ContainerWithEnvVariableOpts{Expand: true}), nil
 }
 
 // Index adds a Pagefind search index to a built site (in pagefind/, with Pagefind's UI
@@ -137,7 +180,7 @@ func (h *Hugo) Index(
 	if err != nil {
 		return nil, err
 	}
-	arch, err := pagefindArch(string(platform))
+	arch, err := releaseArch(string(platform), "x86_64", "aarch64")
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +227,10 @@ func (h *Hugo) Site(
 	// npm installs the site's Node dependencies first (see Build)
 	npm bool,
 ) (*dagger.Directory, error) {
-	built := h.Build(source, path, environment, baseURL, true, extraArgs, npm)
+	built, err := h.Build(ctx, source, path, environment, baseURL, true, extraArgs, npm)
+	if err != nil {
+		return nil, err
+	}
 	if !index {
 		return built, nil
 	}
@@ -253,17 +299,18 @@ func (h *Hugo) Archive(
 		File("/tmp/site.tar.gz")
 }
 
-// pagefindArch maps an OCI platform (os/arch[/variant]) to Pagefind's release architecture.
-func pagefindArch(platform string) (string, error) {
+// releaseArch maps an OCI platform (os/arch[/variant]) to a release's architecture name:
+// amd64 for linux/amd64, arm64 for linux/arm64.
+func releaseArch(platform, amd64, arm64 string) (string, error) {
 	parts := strings.Split(platform, "/")
 	if len(parts) < 2 || parts[0] != "linux" {
 		return "", fmt.Errorf("unsupported platform %q", platform)
 	}
 	switch parts[1] {
 	case "amd64":
-		return "x86_64", nil
+		return amd64, nil
 	case "arm64":
-		return "aarch64", nil
+		return arm64, nil
 	}
-	return "", fmt.Errorf("pagefind has no release for %q", platform)
+	return "", fmt.Errorf("no release for %q", platform)
 }

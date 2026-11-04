@@ -128,7 +128,8 @@ mkdir -p /tmp/bin
 tar -xzf %s -C /tmp/bin pagefind`, pagefindSHA256[arch], name, name)
 	args := append([]string{"/tmp/bin/pagefind", "--site", "/tmp/site"}, extraArgs...)
 	return h.Container.
-		WithMountedFile("/tmp/"+name, archive).
+		// The download is mode 0600; the image's user is hugo.
+		WithMountedFile("/tmp/"+name, archive, dagger.ContainerWithMountedFileOpts{Owner: "hugo"}).
 		WithExec([]string{"sh", "-c", install}).
 		WithDirectory("/tmp/site", site, dagger.ContainerWithDirectoryOpts{Owner: "hugo"}).
 		WithExec(args).

@@ -11,6 +11,8 @@ type Syft struct {
 }
 
 // New creates a new Syft instance with base container.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container is an existing container to use instead of creating a new one
@@ -53,6 +55,8 @@ func New(
 
 // ScanImage generates an SBOM from a container image and returns it as a file.
 // Supports various image sources like docker:, registry:, oci-archive:, etc.
+//
+// +cache="session"
 func (s *Syft) Scan(
 	// +optional
 	// image is a container image to scan (e.g., "alpine:latest" or "docker:myimage:tag")

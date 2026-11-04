@@ -12,6 +12,8 @@ type Melange struct {
 }
 
 // New creates a new Melange instance. Uses repository:tag by default, or an apko-built image if apkoFile is set.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container to use for Apko operations. If not provided, creates a new one from repository:tag
@@ -41,6 +43,8 @@ func New(
 }
 
 // WithGeneratedSignKey generates a new signing key for the Melange container.
+//
+// +cache="session"
 func (m *Melange) WithGeneratedSignKey(
 	// +default="4096"
 	// bits is the number of bits to use for the key
@@ -59,6 +63,8 @@ func (m *Melange) WithGeneratedSignKey(
 }
 
 // WithProvidedSignKey sets the signing key for the Melange container.
+//
+// +cache="session"
 func (m *Melange) WithProvidedSignKey(
 	// +required
 	// privateKey is the private key to use for signing
@@ -76,6 +82,8 @@ func (m *Melange) WithProvidedSignKey(
 }
 
 // Build builds APK packages from a Melange config. Call WithGeneratedSignKey or WithProvidedSignKey first.
+//
+// +cache="session"
 func (m *Melange) Build(
 	// +required
 	// config is the Melange configuration file to use

@@ -19,6 +19,8 @@ type Kubeconform struct {
 
 // New creates a Kubeconform instance. If container is not provided, it is
 // created from repository:tag.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container is an existing container with kubeconform on PATH

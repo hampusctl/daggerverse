@@ -26,6 +26,8 @@ type Grant struct {
 }
 
 // New creates a new Grant instance with base container.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container is an existing container to use instead of creating a new one
@@ -67,6 +69,8 @@ func New(
 }
 
 // Grant runs a grant scan and returns a markdown report from a provided SBOM.
+//
+// +cache="session"
 func (g *Grant) Check(
 	ctx context.Context,
 	// sbom is the SBOM file to scan (Syft JSON, CycloneDX, SPDX, etc.)

@@ -5,7 +5,7 @@ for static hosting (GitHub Pages, GitLab Pages, any web server).
 
 | Function | What it does |
 |---|---|
-| `build` | `hugo` on a source directory; returns the built site (what Hugo writes to `public/`). `--environment` (default `production`), `--base-url`, `--minify` (default on), `--extra-args`. Hugo modules work (the image has Go and git; downloads are cached). |
+| `build` | `hugo` on a source directory; returns the built site (what Hugo writes to `public/`). `--path` when the project is a subdirectory of `--source` (its mounts reach outside it), `--environment` (default `production`), `--base-url`, `--minify` (default on), `--extra-args`. Hugo modules work (the image has Go and git; downloads are cached). |
 | `index` | Adds a [Pagefind](https://pagefind.app) search index (`pagefind/`, with Pagefind's UI scripts) to a built site. |
 | `site` | `build`, then `index` (`--index=false` skips it). |
 | `linkcheck` | Checks the built site's links with [lychee](https://lychee.cli.rs): internal links and `#anchors` always (offline), external links with `--external`. `--base-path` for a site served under a sub-path, `--exclude` for URL patterns. Fails on a broken link. |

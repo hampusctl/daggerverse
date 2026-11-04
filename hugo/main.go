@@ -10,7 +10,7 @@ import (
 	"context"
 	"dagger/hugo/internal/dagger"
 	"fmt"
-	"path"
+	pathpkg "path"
 	"strings"
 )
 
@@ -63,8 +63,13 @@ func New(
 
 // Build runs hugo on source and returns the built site (the content of public/).
 func (h *Hugo) Build(
-	// source is the site's project directory (hugo.yaml or config/, content/, ...)
+	// source is the site's project directory (hugo.yaml or config/, content/, ...), or a
+	// directory that contains it (see path)
 	source *dagger.Directory,
+	// +default="."
+	// path is the project directory within source, for a site whose module mounts reach
+	// outside it (e.g. source is the repository and path is docs/site)
+	path string,
 	// +default="production"
 	// environment is Hugo's environment (--environment)
 	environment string,
@@ -75,10 +80,12 @@ func (h *Hugo) Build(
 	// minify minifies the HTML, CSS, JS, JSON and SVG output
 	minify bool,
 	// +optional
-	// extraArgs are additional hugo arguments, e.g. ["--panicOnWarning"]
+	// extraArgs are additional hugo arguments, e.g. ["--panicOnWarning"] or
+	// ["--config", "hugo.yaml,more.yaml"] (relative to path)
 	extraArgs []string,
 ) *dagger.Directory {
-	args := []string{"hugo", "--source", src, "--destination", "/tmp/public",
+	project := pathpkg.Join(src, pathpkg.Clean("/"+path))
+	args := []string{"hugo", "--source", project, "--destination", "/tmp/public",
 		"--environment", environment, "--cleanDestinationDir", "--gc"}
 	if baseURL != "" {
 		args = append(args, "--baseURL", baseURL)
@@ -89,7 +96,7 @@ func (h *Hugo) Build(
 	args = append(args, extraArgs...)
 	return h.Container.
 		WithDirectory(src, source, dagger.ContainerWithDirectoryOpts{Owner: "hugo"}).
-		WithWorkdir(src).
+		WithWorkdir(project).
 		WithExec(args).
 		Directory("/tmp/public")
 }
@@ -131,8 +138,11 @@ tar -xzf %s -C /tmp/bin pagefind`, pagefindSHA256[arch], name, name)
 // Site builds source and, with index, adds the Pagefind search index: Build then Index.
 func (h *Hugo) Site(
 	ctx context.Context,
-	// source is the site's project directory
+	// source is the site's project directory, or a directory that contains it (see path)
 	source *dagger.Directory,
+	// +default="."
+	// path is the project directory within source
+	path string,
 	// +default="production"
 	// environment is Hugo's environment (--environment)
 	environment string,
@@ -146,7 +156,7 @@ func (h *Hugo) Site(
 	// extraArgs are additional hugo arguments
 	extraArgs []string,
 ) (*dagger.Directory, error) {
-	built := h.Build(source, environment, baseURL, true, extraArgs)
+	built := h.Build(source, path, environment, baseURL, true, extraArgs)
 	if !index {
 		return built, nil
 	}
@@ -176,7 +186,7 @@ func (h *Hugo) Linkcheck(
 	// extraArgs are additional lychee arguments
 	extraArgs []string,
 ) (string, error) {
-	root := path.Join(siteRoot, strings.Trim(path.Clean("/"+basePath), "/"))
+	root := pathpkg.Join(siteRoot, strings.Trim(pathpkg.Clean("/"+basePath), "/"))
 	args := []string{"lychee", "--no-progress", "--root-dir", siteRoot, "--index-files", "index.html"}
 	if !external {
 		args = append(args, "--offline")
@@ -205,7 +215,7 @@ func (h *Hugo) Archive(
 	// prefix is the directory the files are under in the archive; empty puts them at the top
 	prefix string,
 ) *dagger.File {
-	dir := path.Join("/tmp/archive", strings.Trim(prefix, "/"))
+	dir := pathpkg.Join("/tmp/archive", strings.Trim(prefix, "/"))
 	return h.Container.
 		WithDirectory(dir, site, dagger.ContainerWithDirectoryOpts{Owner: "hugo"}).
 		WithWorkdir("/tmp/archive").

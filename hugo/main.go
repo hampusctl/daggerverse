@@ -1,7 +1,9 @@
 // Build, link-check, search-index and package static sites made with Hugo.
 //
 // Build runs Hugo (extended edition, official image pinned by digest) on a site's source
-// directory and returns the built site (Hugo's public/ directory). Index adds a Pagefind
+// directory and returns the built site (Hugo's public/ directory); with npm it first installs
+// the site's Node dependencies from its package-lock.json (themes such as Docsy take
+// Bootstrap, Font Awesome and Dart Sass from node_modules). Index adds a Pagefind
 // search index, Linkcheck checks the built site's links with lychee, and Archive packs the
 // site as a tarball. The built directory is what GitHub Pages and GitLab Pages publish.
 package main
@@ -15,7 +17,8 @@ import (
 )
 
 const (
-	// hugoImage is the official image: Hugo extended, Go (for Hugo modules), git, Dart Sass.
+	// hugoImage is the official image: Hugo extended, Go (for Hugo modules), git, Dart Sass,
+	// Node.js and npm (Alpine packages, so pinned by the digest too).
 	hugoImage = "ghcr.io/gohugoio/hugo:v0.168.0@sha256:1fb8fe7f417abd5802d86747d297728aa48078d763159e7dff6559fe3f8bb8e7"
 	// lycheeImage is lychee's official Alpine image.
 	lycheeImage = "lycheeverse/lychee:0.24.2-alpine@sha256:2255c0b916cc8fc4193f59a4549358a6bae0f7d4ea16b5e1dd4c3b2733c35504"
@@ -87,8 +90,25 @@ func (h *Hugo) Build(
 	// extraArgs are additional hugo arguments, e.g. ["--panicOnWarning"] or
 	// ["--config", "hugo.yaml,more.yaml"] (relative to path)
 	extraArgs []string,
+	// +default=false
+	// npm runs npm ci in the project directory first (it needs a package-lock.json) and puts
+	// its node_modules/.bin first on PATH, so a pinned sass-embedded is the Dart Sass Hugo uses
+	npm bool,
 ) *dagger.Directory {
 	project := pathpkg.Join(src, pathpkg.Clean("/"+path))
+	ctr := h.Container.
+		WithDirectory(src, source, dagger.ContainerWithDirectoryOpts{Owner: "hugo"}).
+		WithWorkdir(project)
+	if npm {
+		ctr = ctr.
+			// npm's download cache, next to Hugo's (the mount is the hugo user's).
+			WithEnvVariable("npm_config_cache", "/cache/npm").
+			// Lifecycle scripts off: the lockfile's packages are installed as published
+			// (their integrity hashes are checked), nothing runs.
+			WithExec([]string{"npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"}).
+			WithEnvVariable("PATH", pathpkg.Join(project, "node_modules/.bin")+":${PATH}",
+				dagger.ContainerWithEnvVariableOpts{Expand: true})
+	}
 	args := []string{"hugo", "--source", project, "--destination", "/tmp/public",
 		"--environment", environment, "--cleanDestinationDir", "--gc"}
 	if baseURL != "" {
@@ -98,11 +118,7 @@ func (h *Hugo) Build(
 		args = append(args, "--minify")
 	}
 	args = append(args, extraArgs...)
-	return h.Container.
-		WithDirectory(src, source, dagger.ContainerWithDirectoryOpts{Owner: "hugo"}).
-		WithWorkdir(project).
-		WithExec(args).
-		Directory("/tmp/public")
+	return ctr.WithExec(args).Directory("/tmp/public")
 }
 
 // Index adds a Pagefind search index to a built site (in pagefind/, with Pagefind's UI
@@ -164,8 +180,11 @@ func (h *Hugo) Site(
 	// +optional
 	// extraArgs are additional hugo arguments
 	extraArgs []string,
+	// +default=false
+	// npm installs the site's Node dependencies first (see Build)
+	npm bool,
 ) (*dagger.Directory, error) {
-	built := h.Build(source, path, environment, baseURL, true, extraArgs)
+	built := h.Build(source, path, environment, baseURL, true, extraArgs, npm)
 	if !index {
 		return built, nil
 	}

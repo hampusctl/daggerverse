@@ -18,6 +18,8 @@ type Apko struct {
 
 // New creates a new Apko instance with a configured container environment.
 // If no container is provided, it creates one from the specified repository and tag.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container to use for Apko operations. If not provided, creates a new one from repository:tag
@@ -49,6 +51,8 @@ func New(
 }
 
 // WithPackages mounts a directory of packages to the container before building.
+//
+// +cache="session"
 func (a *Apko) WithPackages(
 	// +required
 	// packages is the directory of packages to mount
@@ -61,6 +65,8 @@ func (a *Apko) WithPackages(
 // Build creates a container image from an Apko configuration file.
 // The configuration is processed and built into a container image.
 // Returns the built container ready for use or publishing.
+//
+// +cache="session"
 func (a *Apko) Build(
 	ctx context.Context,
 	// +required

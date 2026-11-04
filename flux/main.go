@@ -23,6 +23,8 @@ type Flux struct {
 
 // New creates a Flux instance. If container is not provided, it is created from
 // repository:tag.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container is an existing container with flux on PATH
@@ -47,6 +49,8 @@ func New(
 }
 
 // WithRegistryAuth sets credentials for an OCI registry, used by PushArtifact and TagArtifact.
+//
+// +cache="session"
 func (f *Flux) WithRegistryAuth(
 	// address is the registry host, e.g. ghcr.io
 	address string,
@@ -63,6 +67,8 @@ func (f *Flux) WithRegistryAuth(
 
 // PushArtifact pushes source as an OCI artifact and returns its digest URL
 // (oci://repo@sha256:...).
+//
+// +cache="never"
 func (f *Flux) PushArtifact(
 	ctx context.Context,
 	// source is the directory to package
@@ -107,6 +113,8 @@ func (f *Flux) PushArtifact(
 }
 
 // TagArtifact adds tags to an existing artifact.
+//
+// +cache="never"
 func (f *Flux) TagArtifact(
 	ctx context.Context,
 	// url is the artifact URL with tag or digest, e.g. oci://ghcr.io/org/app:sha-abc
@@ -123,6 +131,8 @@ func (f *Flux) TagArtifact(
 
 // Envsubst substitutes ${VAR} references in input with vars, like Flux post-build
 // substitution, and returns the result.
+//
+// +cache="session"
 func (f *Flux) Envsubst(
 	// input is the file to substitute
 	input *dagger.File,

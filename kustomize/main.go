@@ -21,6 +21,8 @@ type Kustomize struct {
 
 // New creates a Kustomize instance. If container is not provided, kustomize
 // version is downloaded into an Alpine container.
+//
+// +cache="session"
 func New(
 	ctx context.Context,
 	// +optional
@@ -62,6 +64,8 @@ func New(
 }
 
 // Build runs kustomize build on path inside source and returns the rendered YAML.
+//
+// +cache="session"
 func (k *Kustomize) Build(
 	// source is the directory holding the kustomization and everything it references
 	source *dagger.Directory,
@@ -82,6 +86,8 @@ func (k *Kustomize) Build(
 
 // SetImage runs "kustomize edit set image" on the kustomization in dir and returns
 // the updated source directory. Each image is "name=newName[:tag|@digest]".
+//
+// +cache="session"
 func (k *Kustomize) SetImage(
 	// source is the directory holding the kustomization
 	source *dagger.Directory,

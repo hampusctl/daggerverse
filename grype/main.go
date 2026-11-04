@@ -14,6 +14,8 @@ type Grype struct {
 // New creates a new Grype instance with a configured container environment.
 // If container is provided, it is used as-is. Otherwise, a container is created
 // from repository:tag, or built from an Apko config if apkoFile is provided.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container is an existing container to use instead of creating a new one
@@ -56,6 +58,8 @@ func New(
 
 // ScanSbom runs a vulnerability scan from a provided SBOM file and returns a markdown report.
 // The SBOM is mounted into the container and scanned, with results formatted as a markdown table.
+//
+// +cache="session"
 func (g *Grype) Scan(
 	ctx context.Context,
 	// sbom is the SBOM file to scan (Syft JSON, CycloneDX, SPDX, etc.)

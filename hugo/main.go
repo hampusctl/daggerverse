@@ -42,6 +42,8 @@ type Hugo struct {
 }
 
 // New creates a Hugo instance. The default containers are pinned by digest.
+//
+// +cache="session"
 func New(
 	// +optional
 	// container is an existing container with hugo (and go, for Hugo modules) on PATH
@@ -62,6 +64,8 @@ func New(
 }
 
 // Build runs hugo on source and returns the built site (the content of public/).
+//
+// +cache="session"
 func (h *Hugo) Build(
 	// source is the site's project directory (hugo.yaml or config/, content/, ...), or a
 	// directory that contains it (see path)
@@ -103,6 +107,8 @@ func (h *Hugo) Build(
 
 // Index adds a Pagefind search index to a built site (in pagefind/, with Pagefind's UI
 // scripts) and returns the site.
+//
+// +cache="session"
 func (h *Hugo) Index(
 	ctx context.Context,
 	// site is a built site (Build's output)
@@ -137,6 +143,8 @@ tar -xzf %s -C /tmp/bin pagefind`, pagefindSHA256[arch], name, name)
 }
 
 // Site builds source and, with index, adds the Pagefind search index: Build then Index.
+//
+// +cache="session"
 func (h *Hugo) Site(
 	ctx context.Context,
 	// source is the site's project directory, or a directory that contains it (see path)
@@ -209,6 +217,8 @@ func (h *Hugo) Linkcheck(
 
 // Archive packs a built site into a gzipped tarball whose files are under prefix
 // (GitLab Pages publishes public/; a GitHub Pages artifact is the site's content).
+//
+// +cache="session"
 func (h *Hugo) Archive(
 	// site is a built site
 	site *dagger.Directory,

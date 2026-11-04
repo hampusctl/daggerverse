@@ -1,0 +1,10 @@
+# A minimal site for trying the module: dagger -m hugo call site --source=hugo/testdata/site
+baseURL: /
+title: hugo module example
+disableKinds: [taxonomy, term, rss, sitemap]
+markup:
+  goldmark:
+    renderHooks:
+      link:
+        # Resolve [text](page.md) links to the page's URL.
+        useEmbedded: always

@@ -19,7 +19,6 @@ import (
 	"dagger/grant/internal/dagger"
 	"dagger/grant/internal/report"
 	"fmt"
-	"strings"
 )
 
 type Grant struct {
@@ -115,30 +114,5 @@ func (g *Grant) Check(
 		return nil, fmt.Errorf("report to markdown: %w", err)
 	}
 
-	return detach(ctx, ctr.Directory("/tmp").WithNewFile("report.md", md))
-}
-
-// detach copies the files at the top of dir into a new directory built only from their
-// contents. A directory returned straight from a container keeps, in its ID, the inputs that
-// made it, including caller files loaded from the caller's module context by host path. Dagger
-// caches function results across sessions, so another runner (another checkout path) that
-// gets this result from the cache fails to load it with "module not found: <first caller's
-// path>". A directory of new files refers to nothing of the caller's.
-func detach(ctx context.Context, dir *dagger.Directory) (*dagger.Directory, error) {
-	names, err := dir.Entries(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list outputs: %w", err)
-	}
-	out := dag.Directory()
-	for _, name := range names {
-		if strings.HasSuffix(name, "/") {
-			continue
-		}
-		contents, err := dir.File(name).Contents(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", name, err)
-		}
-		out = out.WithNewFile(name, contents)
-	}
-	return out, nil
+	return ctr.Directory("/tmp").WithNewFile("report.md", md), nil
 }
